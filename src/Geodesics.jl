@@ -96,7 +96,7 @@ Calculations use Vincenty's forward formula [1].
    with application of nested equations" (PDF). Survey Review. XXIII (176): 88–93.
    doi:10.1179/sre.1975.23.176.88
 """
-function forward(lon, lat, azimuth, distance, a, f)::Tuple{Float64,Float64,Float64}
+function forward(lon, lat, azimuth, distance, a, f; tolerance = 1.0e-9)::Tuple{Float64,Float64,Float64}
     abs(lat <= π/2) || throw(ArgumentError("Latitude ($lat) must be in range [-π/2, π/2]"))
     a > 0 || throw(ArgumentError("Semimajor axis ($a) must be positive"))
     abs(f) < 1 || throw(ArgumentError("Magnitude of flattening ($f) must be less than 1"))
@@ -129,7 +129,7 @@ function forward(lon, lat, azimuth, distance, a, f)::Tuple{Float64,Float64,Float
     # Iterate the following three equations
     # until there is no significant change in sigma
     # two_sigma_m , delta_sigma
-    while abs((last_sigma - sigma)/sigma) > 1.0e-9
+    while abs((last_sigma - sigma)/sigma) > tolerance
         global two_sigma_m = 2*sigma1 + sigma
         delta_sigma = B*sin(sigma)*(cos(two_sigma_m) + (B/4)*(cos(sigma)*(-1 + 2*cos(two_sigma_m)^2 - (B/6)*cos(two_sigma_m)*(-3 + 4*sin(sigma)^2)*(-3 + 4*cos(two_sigma_m)^2 ))))
         last_sigma = sigma
@@ -172,19 +172,18 @@ Calculations use Vincenty's inverse formula [1].
    with application of nested equations" (PDF). Survey Review. XXIII (176): 88–93.
    doi:10.1179/sre.1975.23.176.88
 """
-function inverse(lon1, lat1, lon2, lat2, a, f)::Tuple{Float64,Float64,Float64}
+function inverse(lon1, lat1, lon2, lat2, a, f; tolerance = 1.0e-9)::Tuple{Float64,Float64,Float64}
     for lat in (lat1, lat2)
         abs(lat <= π/2) || throw(ArgumentError("Latitude ($lat) must be in range [-π/2, π/2]"))
     end
     a > 0 || throw(ArgumentError("Semimajor axis ($a) must be positive"))
     abs(f) < 1 || throw(ArgumentError("Magnitude of flattening ($f) must be less than 1"))
     lambda1, phi1, lambda2, phi2 = Float64(lon1), Float64(lat1), Float64(lon2), Float64(lat2)
-    a, f = Float64(a), Float64(f)
-    tol = 1.0e-8
-    if (abs(phi2 - phi1) < tol) && (abs(lambda2 - lambda1) < tol)
+    if (abs(phi2 - phi1) < tolerance) && (abs(lambda2 - lambda1) < tolerance)
         return 0.0, 0.0, 0.0
     end
 
+    a, f = Float64(a), Float64(f)
     b = a*(1 - f)
 
     TanU1 = (1 - f)*tan(phi1)
@@ -201,7 +200,7 @@ function inverse(lon1, lat1, lon2, lat2, a, f)::Tuple{Float64,Float64,Float64}
     alpha, sigma, Sin_sigma, Cos2sigma_m, Cos_sigma, sqr_sin_sigma =
         -999999., -999999., -999999., -999999., -999999., -999999.
     while ((last_lambda < -3000000.0) || (lambda != 0)) &&
-            (abs((last_lambda - lambda)/lambda) > 1.0e-9)
+            (abs((last_lambda - lambda)/lambda) > tolerance)
         sqr_sin_sigma = (cos(U2)*sin(lambda))^2 +
                          ((cos(U1)*sin(U2) - sin(U1)*cos(U2)*cos(lambda)))^2
         Sin_sigma = sqrt(sqr_sin_sigma)
